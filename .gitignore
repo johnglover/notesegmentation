@@ -1,0 +1,7 @@
+*.pyc
+*.png
+*.egg-info
+*.swp
+*.so
+build
+notesegmentation/*.cpp
