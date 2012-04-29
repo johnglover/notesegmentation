@@ -1,5 +1,4 @@
 #include "segmentation.h"
-#include <stdio.h>
 
 GLT::GLT() {
     frame_size = 512;
