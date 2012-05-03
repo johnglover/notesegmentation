@@ -41,8 +41,8 @@ def odf(audio, metadata, frame_size=2048, hop_size=512, return_odf=False):
 
 
 def spectral_centroid(audio, metadata, frame_size=512, hop_size=512):
-    base_freq = float(metadata['sampling_rate']) / (frame_size / 2.0)
-    freqs = np.arange(0.0, float(metadata['sampling_rate']), base_freq)
+    num_bins = (frame_size / 2) + 1
+    freqs = np.linspace(0.0, float(metadata['sampling_rate']) / 2, num_bins)
     sc = np.zeros(len(audio))
 
     p = 0
@@ -51,7 +51,7 @@ def spectral_centroid(audio, metadata, frame_size=512, hop_size=512):
 
         window = np.hamming(frame_size)
         f = np.fft.rfft(frame * window)
-        magnitudes = abs(f)[1:]
+        magnitudes = abs(f)
 
         if sum(magnitudes):
             centroid = sum(freqs * magnitudes) / sum(magnitudes)
