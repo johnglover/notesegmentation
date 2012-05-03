@@ -7,3 +7,8 @@ try:
     import _amplitude_envelopes as ae
 except ImportError:
     pass
+
+try:
+    import _segmentation as s
+except ImportError:
+    pass
