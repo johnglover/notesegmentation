@@ -13,7 +13,7 @@ Dependencies
 ------------
 
 * [cython](http://cython.org)
-* [simpl](http://simplsound.sourceforge.net) (and all related dependencies)
+* [modal](http://github.com/johnglover/modal) (and all related dependencies)
 * [simpl](http://simplsound.sourceforge.net) (and all related dependencies)
 
 
