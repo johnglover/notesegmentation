@@ -12,3 +12,8 @@ try:
     import _segmentation as s
 except ImportError:
     pass
+
+try:
+    import _util as u
+except ImportError:
+    pass

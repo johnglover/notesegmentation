@@ -19,6 +19,14 @@ class TestUtils(object):
         a = ns.util.cumulative_moving_average(np.array([1.0, 2.0, 3.0, 4.0, 5.0]))
         assert np.all(a == np.array([1.0, 1.5, 2.0, 2.5, 3])), a
 
+    def test_c_cumulative_moving_average(self):
+        a = ns.u.cumulative_moving_average(np.array([3.0]))
+        assert a == np.array([3.0]), a
+        a = ns.u.cumulative_moving_average(np.array([1.0, 2.0, 3.0]))
+        assert np.all(a == np.array([1.0, 1.5, 2.0])), a
+        a = ns.u.cumulative_moving_average(np.array([1.0, 2.0, 3.0, 4.0, 5.0]))
+        assert np.all(a == np.array([1.0, 1.5, 2.0, 2.5, 3])), a
+
     def test_decreasing(self):
         a = np.array([1, 2, 3, 4, 5, 4, 3, 2, 1])
         assert not ns.util.decreasing(a, 3, 2)

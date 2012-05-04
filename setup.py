@@ -27,6 +27,14 @@ amplitude_envelopes = Extension(
     language="c++"
 )
 
+util = Extension(
+    "notesegmentation._util",
+    sources=["notesegmentation/_util.pyx",
+             "src/util.cpp"],
+    include_dirs=["src"] + include_dirs,
+    language="c++"
+)
+
 segmentation = Extension(
     "notesegmentation._segmentation",
     sources=["notesegmentation/_segmentation.pyx",
@@ -49,6 +57,6 @@ setup(
     platforms=["Linux", "Mac OS-X", "Unix"],
     version='1.0',
     packages=['notesegmentation'],
-    ext_modules=[amplitude_envelopes, segmentation],
+    ext_modules=[amplitude_envelopes, util, segmentation],
     cmdclass={'build_ext': build_ext}
 )
