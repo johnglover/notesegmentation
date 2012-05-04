@@ -1,5 +1,4 @@
 #include "amplitude_envelopes.h"
-#include <stdio.h>
 
 // Return the mean value of n samples
 sample mean(int n, sample* a) {
