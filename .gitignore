@@ -4,4 +4,5 @@
 *.swp
 *.so
 build
+docs/_build
 notesegmentation/*.cpp
