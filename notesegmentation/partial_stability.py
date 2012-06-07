@@ -47,7 +47,7 @@ def _deviation(partial1, partial2):
 
 
 def get_stability(audio, metadata, frame_size=512, hop_size=512,
-                  num_partials=60, stretched=True):
+                  num_partials=60, stretched=False):
     """
     Return a partial stability signal (as a numpy array) for a
     given audio signal.
@@ -60,13 +60,14 @@ def get_stability(audio, metadata, frame_size=512, hop_size=512,
     for frame_number in range(1, len(frames)):
         f1 = frames[frame_number - 1]
         f2 = frames[frame_number]
-        avg_deviation = 0.0
+        avg = 0.0
         for i in range(num_partials):
             if _is_active(f1.partials[i]) or _is_active(f2.partials[i]):
-                avg_deviation += _deviation(f2.partials[i], f1.partials[i])
-        avg_deviation /= num_partials
-        non_stretched_deviations.append(avg_deviation)
-        deviations[p:p + hop_size] = avg_deviation
+                avg += _deviation(f2.partials[i], f1.partials[i])
+        avg /= num_partials
+        non_stretched_deviations.append(avg)
+        start = deviations[frame_number - 1 if frame_number else 0]
+        deviations[p:p + hop_size] = np.linspace(start, avg, hop_size)
         p += hop_size
 
     if stretched:
