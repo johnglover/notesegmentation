@@ -39,9 +39,10 @@ segmentation = Extension(
     "notesegmentation._segmentation",
     sources=["notesegmentation/_segmentation.pyx",
              "src/window.cpp",
+             "src/util.cpp",
              "src/segmentation.cpp"],
     include_dirs=["src"] + include_dirs,
-    libraries=['m', 'fftw3'],
+    libraries=['modal', 'm', 'fftw3'],
     language="c++"
 )
 

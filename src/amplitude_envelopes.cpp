@@ -41,8 +41,8 @@ sample rms(int n, sample* audio, int n_prev, sample* prev) {
     }
     s = sqrt(s/n);
 
-    for(int i = n_prev; i >= 1; i--) {
-        prev[i] = prev[i-1];
+    for(int i = n_prev - 1; i > 0; i--) {
+        prev[i] = prev[i - 1];
     }
     prev[0] = s;
 

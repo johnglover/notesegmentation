@@ -7,7 +7,8 @@ import notesegmentation as ns
 
 class TestSegmentation(object):
     float_precision = 5
-    frame_size = 512
+    hop_size = 512
+    frame_size = 2048
     audio_path = os.path.join(
         os.path.dirname(__file__), '../clarinet-C-octave0.wav'
     )
@@ -34,12 +35,41 @@ class TestSegmentation(object):
 
     def test_spectral_centroid(self):
         glt = ns.s.GLT()
-        audio_metadata = {'sampling_rate': 44100}
+        metadata = {'sampling_rate': 44100}
+
+        i = 0
+        while i < len(self.audio):
+            f = self.audio[i:i + self.hop_size]
+            py_sc = ns.segmentation.spectral_centroid(f, metadata)[-1]
+            c_sc = glt.spectral_centroid(f)
+            nt.assert_almost_equals(py_sc, c_sc, self.float_precision)
+            i += self.hop_size
+
+    def test_segment(self):
+        metadata = {'sampling_rate': 44100,
+                    'spectral_centroid_frame_size': 512,
+                    'spectral_centroid_hop_size': 512,
+                    'odf_frame_size': 512,
+                    'odf_hop_size': 512,
+                    'env_hop_size': 512}
+        py_segments = ns.segmentation.glt(self.audio, metadata)[0]
+
+        c_segments = {}
+        glt = ns.s.GLT()
 
         i = 0
         while i < len(self.audio):
             f = self.audio[i:i + self.frame_size]
-            py_sc = ns.segmentation.spectral_centroid(f, audio_metadata)[-1]
-            c_sc = glt.spectral_centroid(f)
-            nt.assert_almost_equals(py_sc, c_sc, self.float_precision)
-            i += self.frame_size
+            s = glt.segment(f)
+            if not 'onset' in c_segments and s == glt.ONSET:
+                c_segments['onset'] = i
+            elif not 'sustain' in c_segments and s == glt.SUSTAIN:
+                c_segments['sustain'] = i
+            i += self.hop_size
+
+        print py_segments
+        print c_segments
+
+        # expected_keys = ['onset', 'sustain', 'release', 'offset']
+        # for k in expected_keys:
+        #     assert py_segments[k] == c_segments[k]
