@@ -10,6 +10,7 @@ def next_minima(a, current, n=1):
         forward_neighbours = min(n, len(a) - (i + 1))
         backward_neighbours = min(n, i)
         minima = True
+
         # search all forward neighbours (up to a max of n), testing to see
         # if the current sample is less than all of them
         for p in range(forward_neighbours):
@@ -24,10 +25,12 @@ def next_minima(a, current, n=1):
                 if a[i] > a[i + p2 + 1]:
                     minima = False
                     break
+
         # if it is greater than 1 of the forward neighbours,
         # no need to check backwards
         if not minima:
             continue
+
         # now test the backwards neighbours
         for p in range(backward_neighbours):
             if a[i] > a[i - (p + 1)]:
@@ -43,8 +46,38 @@ def next_minima(a, current, n=1):
                     break
         if minima:
             return i
+
     # if no minima found, return the last sample position
-    return len(a)
+    return len(a) - 1
+
+
+def next_minima_rt(a, current, n=1):
+    """
+    Find the next local minima in a.
+    Must be greater than n previous adjacent values, and 1 forward value.
+    Returns the index of the forward value
+    (simulating real-time results with a 1 sample delay).
+    """
+    for i in range(current + 1, len(a) - 1):
+        backward_neighbours = min(n, i)
+        is_minima = True
+
+        # check that the current sample is greater than its forward neighbour
+        if a[i] > a[i + 1]:
+            is_minima = False
+            continue
+
+        # test the backwards neighbours
+        for p in range(backward_neighbours):
+            if a[i] > a[i - (p + 1)]:
+                is_minima = False
+                break
+
+        if is_minima:
+            return i + 1
+
+    # if no minima found, return the last sample position
+    return len(a) - 1
 
 
 def next_maxima(a, current, n=1):
@@ -56,6 +89,7 @@ def next_maxima(a, current, n=1):
         forward_neighbours = min(n, len(a) - (i + 1))
         backward_neighbours = min(n, i)
         m = True
+
         # search all forward neighbours (up to a max of n), testing to see
         # if the current sample is greater than all of them
         for p in range(forward_neighbours):
@@ -72,6 +106,7 @@ def next_maxima(a, current, n=1):
                     break
         if not m:
             continue
+
         # now test the backwards neighbours
         for p in range(backward_neighbours):
             if a[i] < a[i - (p + 1)]:
@@ -87,8 +122,38 @@ def next_maxima(a, current, n=1):
                     break
         if m:
             return i
-    # if no minima found, return the last sample position
-    return len(a)
+
+    # if no maxima found, return the last sample position
+    return len(a) - 1
+
+
+def next_maxima_rt(a, current, n=1):
+    """
+    Find the next local maxima in a.
+    Must be less than n previous adjacent values, and 1 forward value.
+    Returns the index of the forward value
+    (simulating real-time results with a 1 sample delay).
+    """
+    for i in range(current + 1, len(a) - 1):
+        backward_neighbours = min(n, i)
+        is_maxima = True
+
+        # check that the current sample is greater than its forward neighbour
+        if a[i] <= a[i + 1]:
+            is_maxima = False
+            continue
+
+        # test the backwards neighbours
+        for p in range(backward_neighbours):
+            if a[i] <= a[i - (p + 1)]:
+                is_maxima = False
+                break
+
+        if is_maxima:
+            return i + 1
+
+    # if no maxima found, return the last sample position
+    return len(a) - 1
 
 
 def find_peaks(a, threshold, n=3):

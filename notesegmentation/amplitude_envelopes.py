@@ -21,7 +21,7 @@ def rms(audio, n=512, m=3):
 
 def rms_frame(audio, n=512, m=3):
     '''
-    Root Mean Square amplitude envelope
+    Root Mean Square amplitude envelope (one value per frame).
     '''
     rms = np.zeros((len(audio) / n) + 1)
     prev_values = np.zeros(m)

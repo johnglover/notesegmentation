@@ -9,38 +9,41 @@ class NoOnsetsFound(Exception):
     pass
 
 
-def odf(audio, metadata, frame_size=2048, hop_size=512, return_odf=False):
+def odf(audio, metadata, return_odf=False):
+    frame_size = metadata.get('odf_frame_size', 2048)
+    hop_size = metadata.get('odf_hop_size', 512)
+
     o = modal.PeakAmpDifferenceODF()
     o.set_frame_size(frame_size)
     o.set_hop_size(hop_size)
     o.set_sampling_rate(metadata['sampling_rate'])
 
     onsets = []
-    odf_values = np.zeros(len(audio))
-    threshold = []
+    odf_values = []
     onset_det = od.RTOnsetDetection()
 
     p = 0
     while p <= len(audio) - frame_size:
         frame = audio[p:p + frame_size]
         odf_value = o.process_frame(frame)
-        start = odf_values[p - 1 if p else 0]
-        odf_values[p:p + hop_size] = np.linspace(start, odf_value, hop_size)
+        odf_values.append(odf_value)
         det_results = onset_det.is_onset(
             odf_value, o.max_odf_value(), return_threshold=True
         )
         if det_results[0]:
             onsets.append(p)
-        threshold.append(det_results[1])
         p += hop_size
 
     if not return_odf:
         return onsets
     else:
-        return (onsets, odf_values)
+        return (onsets, np.array(odf_values))
 
 
-def spectral_centroid(audio, metadata, frame_size=512, hop_size=512):
+def spectral_centroid(audio, metadata):
+    frame_size = metadata.get('spectral_centroid_frame_size', 512)
+    hop_size = metadata.get('spectral_centroid_hop_size', 512)
+
     num_bins = (frame_size / 2) + 1
     freqs = np.linspace(0.0, float(metadata['sampling_rate']) / 2, num_bins)
     sc = np.zeros(len(audio))
@@ -222,8 +225,11 @@ def glt(audio, metadata, verbose=False):
         raise NoOnsetsFound()
     onsets = [onsets[0]]
 
-    env = ae.rms(audio)
-    env_no_ma = ae.rms(audio, m=1)
+    odf_hop_size = metadata.get('odf_hop_size', 512)
+    env_hop_size = metadata.get('env_hop_size', 512)
+
+    env = ae.rms_frame(audio, n=env_hop_size)
+    env_no_ma = ae.rms_frame(audio, n=env_hop_size, m=1)
     sc = spectral_centroid(audio, metadata)
     cma = util.cumulative_moving_average(sc)
 
@@ -244,34 +250,38 @@ def glt(audio, metadata, verbose=False):
                       'release': len(audio),
                       'offset': len(audio)}
 
+        onset_frame = onset / odf_hop_size
+
         # transient/attack: from onset until next minima in odf,
         #                   unless amp local max reached first
-        boundaries['sustain'] = min(util.next_maxima(env, onset),
-                                    util.next_minima(o, onset))
+        boundaries['sustain'] = min(
+            util.next_maxima_rt(env, onset_frame) * env_hop_size,
+            util.next_minima_rt(o, onset_frame) * odf_hop_size
+        )
 
         # release: 3 consecutive frames with decreasing energy and
         #          spectral centroid below average
-        r = util.next_maxima(env, onset)
+        r = util.next_maxima(env, onset_frame)
         peak_amp = env[r]
-        for i in range(r, len(audio)):
+        for i in range(r, len(env)):
             peak_amp = max(peak_amp, env[i])
-            if (env[i] <= 0.8 * peak_amp) and util.decreasing(env, i, 5, 512)\
-               and (sc[i] < cma[i]):
-                boundaries['release'] = i
+            if (env[i] <= 0.8 * peak_amp) and util.decreasing(env, i, 5)\
+               and (sc[i * env_hop_size] < cma[i * env_hop_size]):
+                boundaries['release'] = i * env_hop_size
                 break
             elif env[i] <= 0.33 * peak_amp:
-                boundaries['release'] = i
+                boundaries['release'] = i * env_hop_size
                 break
 
         # offset: point (after sustain) at which envelope <=-60db
         #         below peak value
         peak_amp = np.max(audio)
-        peak_location = np.argmax(audio)
+        peak_location = np.argmax(audio) / env_hop_size
         rt60 = (10 ** -3) * peak_amp
-        offset = peak_location
-        for i in range(peak_location, len(audio)):
+        offset = peak_location * env_hop_size
+        for i in range(peak_location, len(env_no_ma)):
             if env_no_ma[i] <= rt60:
-                offset = i
+                offset = i * env_hop_size
                 break
         boundaries['offset'] = offset
 
