@@ -67,11 +67,10 @@ class TestSegmentation(object):
                 c_segments['sustain'] = i
             elif not 'release' in c_segments and s == glt.RELEASE:
                 c_segments['release'] = i
+            elif not 'offset' in c_segments and s == glt.OFFSET:
+                c_segments['offset'] = i
             i += self.hop_size
 
-        print py_segments
-        print c_segments
-
-        # expected_keys = ['onset', 'sustain', 'release', 'offset']
-        # for k in expected_keys:
-        #     assert py_segments[k] == c_segments[k]
+        expected_keys = ['onset', 'sustain', 'release', 'offset']
+        for k in expected_keys:
+            assert py_segments[k] == c_segments[k]

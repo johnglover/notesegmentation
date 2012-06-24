@@ -30,6 +30,7 @@ GLT::GLT() : MIN_ONSET_GAP_MS(200) {
     fft_out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * num_bins);
 	p = fftw_plan_dft_r2c_1d(frame_size, fft_in, fft_out, FFTW_ESTIMATE);
 
+    peak_rms = 0.f;
     peak_amp = 0.f;
 
     n_prev_odf_values = 2;
@@ -106,8 +107,13 @@ int GLT::segment(int n, sample* audio) {
 
     sample rms_ma_value = mean(n_amp_mean_values, prev_amp_values);
 
-    if(rms_ma_value > peak_amp) {
-        peak_amp = rms_ma_value;
+    for(int i = 0; i < frame_size; i++) {
+        if(fabs(audio[i]) > peak_amp) {
+            peak_amp = fabs(audio[i]);
+        }
+    }
+    if(rms_ma_value > peak_rms) {
+        peak_rms = rms_ma_value;
     }
 
     bool is_odf_minima = util::is_minima(odf_value, 1, prev_odf_values);
@@ -134,7 +140,6 @@ int GLT::segment(int n, sample* audio) {
         }
     }
 
-    // if in the attack region, check for the start of sustain
     if(current_region == ATTACK) {
         // transient/attack: from onset until next minima in odf,
         // unless amp local max reached first
@@ -142,21 +147,23 @@ int GLT::segment(int n, sample* audio) {
             current_region = SUSTAIN;
         }
     }
-
-    // if in the sustain region, check for the start of release
     else if(current_region == SUSTAIN) {
         // release: 3 consecutive frames with decreasing energy and
         //          spectral centroid below average
-        if((rms_ma_value <= 0.8 * peak_amp &&
+        if((rms_ma_value <= 0.8 * peak_rms &&
             util::decreasing(n_prev_amp_ma_values, prev_amp_ma_values) &&
             centroid < centroid_cma) ||
-           (rms_ma_value <= 0.33 * peak_amp)) {
+           (rms_ma_value <= 0.33 * peak_rms)) {
             current_region = RELEASE;
         }
     }
-
-    // if in the release region, check for the offset
     else if(current_region == RELEASE) {
+        // offset: point (after sustain) at which envelope <=-60db
+        //         below peak value
+        sample offset_threshold = 0.001 * peak_amp;
+        if(rms_value <= offset_threshold) {
+            current_region = OFFSET;
+        }
     }
 
     n_frames += 1;

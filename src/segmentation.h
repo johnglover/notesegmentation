@@ -1,6 +1,7 @@
 #ifndef _NOTESEGMENTATION_H
 #define _NOTESEGMENTATION_H
 
+#include <math.h>
 #include <fftw3.h>
 #include "modal/detectionfunctions.h"
 #include "modal/onsetdetection.h"
@@ -35,6 +36,7 @@ class GLT {
         fftw_complex* fft_out;
         fftw_plan p;
 
+        sample peak_rms;  // largest RMS amplitude value in a note
         sample peak_amp;  // largest amplitude value in a note
 
         // values used to calculate local minima/maxima
