@@ -278,8 +278,8 @@ def glt(audio, metadata, verbose=False):
 
         # offset: point (after sustain) at which envelope <=-60db
         #         below peak value
-        peak_amp = np.max(audio)
-        peak_location = np.argmax(audio) / env_hop_size
+        peak_amp = np.max(np.abs(audio))
+        peak_location = np.argmax(np.abs(audio)) / env_hop_size
         rt60 = (10 ** -3) * peak_amp
         offset = peak_location * env_hop_size
         for i in range(peak_location, len(env_no_ma)):
