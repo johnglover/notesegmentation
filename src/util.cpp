@@ -1,5 +1,5 @@
 #include "util.h"
-//
+
 // Set the first value in a to new_value and rotate the rest of the values
 void util::rotate(int n, sample* a, sample new_value) {
     for(int i = n - 1; i > 0; i--) {
@@ -9,7 +9,7 @@ void util::rotate(int n, sample* a, sample new_value) {
 }
 
 // Return the cumulative moving average, given a total of n previous values
-sample util::cumulative_moving_average(int n, sample current, sample prev) {
+sample util::cumulative_moving_average(long n, sample current, sample prev) {
     return prev + ((current - prev) / (n + 1));
 }
 
@@ -60,4 +60,16 @@ bool util::is_maxima(sample current, int n_prev, sample* prev) {
     }
 
     return result;
+}
+
+// Return true if s is a decreasing signal.
+// Signal goes from 0..n, where 0 is the most recent value.
+bool util::decreasing(int n, sample* signal) {
+    for(int i = 0; i < n - 1; i++) {
+        if(signal[i] >= signal[i + 1]) {
+            return false;
+        }
+    }
+
+    return true;
 }

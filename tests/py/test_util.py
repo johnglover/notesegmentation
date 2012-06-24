@@ -34,15 +34,21 @@ class TestUtils(object):
         assert ns.util.decreasing(a, 8, 4)
         assert ns.util.decreasing(a, 8, 2, 2)
 
+    def test_c_decreasing(self):
+        assert not ns.u.decreasing(np.array([6.0, 5.0, 4.0]))
+        assert not ns.u.decreasing(np.array([2.0, 2.0, 3.0]))
+        assert not ns.u.decreasing(np.array([3.0, 2.0, 3.0, 4.0, 5.0]))
+        assert ns.u.decreasing(np.array([1.0, 2.0, 3.0, 4.0, 5.0]))
+
     def test_next_maxima(self):
         a = np.array([1, 2, 3, 4, 5, 4, 3, 4, 1])
         assert ns.util.next_maxima(a, 0, 1) == 4
         assert ns.util.next_maxima(a, 1, 3) == 4
         assert ns.util.next_maxima(a, 4, 1) == 7
-        assert ns.util.next_maxima(a, 4, 4) == len(a)
+        assert ns.util.next_maxima(a, 4, 4) == len(a) - 1
 
     def test_next_minima(self):
         a = np.array([1, 2, 0, 4, 5, 4, 3, 4, 1])
         assert ns.util.next_minima(a, 0, 1) == 2
         assert ns.util.next_minima(a, 2, 1) == 6
-        assert ns.util.next_minima(a, 2, 2) == len(a)
+        assert ns.util.next_minima(a, 2, 2) == len(a) - 1

@@ -30,9 +30,12 @@ GLT::GLT() : MIN_ONSET_GAP_MS(200) {
     fft_out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * num_bins);
 	p = fftw_plan_dft_r2c_1d(frame_size, fft_in, fft_out, FFTW_ESTIMATE);
 
+    peak_amp = 0.f;
+
     n_prev_odf_values = 2;
     n_prev_amp_values = 3;
-    n_prev_amp_ma_values = 3;
+    n_prev_amp_ma_values = 5;
+    n_amp_mean_values = 3;
     n_prev_centroid_values = 2;
     prev_odf_values = new sample[n_prev_odf_values];
     prev_amp_values = new sample[n_prev_amp_values];
@@ -42,6 +45,9 @@ GLT::GLT() : MIN_ONSET_GAP_MS(200) {
     memset(prev_amp_values, 0.0, sizeof(sample) * n_prev_amp_values);
     memset(prev_amp_ma_values, 0.0, sizeof(sample) * n_prev_amp_ma_values);
     memset(prev_centroid_values, 0.0, sizeof(sample) * n_prev_centroid_values);
+
+    n_frames = 0;
+    prev_centroid_cma = 0.f;
 }
 
 GLT::~GLT() {
@@ -59,6 +65,10 @@ GLT::~GLT() {
     delete [] prev_amp_values;
     delete [] prev_amp_ma_values;
     delete [] prev_centroid_values;
+}
+
+// Clear all stored values so ready for new note
+void GLT::reset() {
 }
 
 // Return the spectral centroid for a given frame of audio
@@ -89,11 +99,22 @@ sample GLT::spectral_centroid(int n, sample* audio) {
 int GLT::segment(int n, sample* audio) {
     sample odf_value = odf->process_frame(frame_size, audio);
     sample centroid = spectral_centroid(frame_size, audio);
+    sample centroid_cma = util::cumulative_moving_average(n_frames, centroid, prev_centroid_cma);
 
     sample rms_value = rms(frame_size, audio);
     util::rotate(n_prev_amp_values, prev_amp_values, rms_value);
 
-    sample rms_ma_value = mean(n_prev_amp_values, prev_amp_values);
+    sample rms_ma_value = mean(n_amp_mean_values, prev_amp_values);
+
+    if(rms_ma_value > peak_amp) {
+        peak_amp = rms_ma_value;
+    }
+
+    bool is_odf_minima = util::is_minima(odf_value, 1, prev_odf_values);
+    bool is_rms_maxima = util::is_maxima(rms_ma_value, 1, prev_amp_ma_values);
+
+    util::rotate(n_prev_odf_values, prev_odf_values, odf_value);
+    util::rotate(n_prev_amp_ma_values, prev_amp_ma_values, rms_ma_value);
 
     // update onset and offset, as they can only last for 1 frame
     if(current_region == ONSET) {
@@ -117,22 +138,29 @@ int GLT::segment(int n, sample* audio) {
     if(current_region == ATTACK) {
         // transient/attack: from onset until next minima in odf,
         // unless amp local max reached first
-        if(util::is_minima(odf_value, n_prev_odf_values, prev_odf_values) ||
-           util::is_maxima(rms_ma_value, n_prev_amp_ma_values, prev_amp_ma_values)) {
+        if(is_odf_minima || is_rms_maxima) {
             current_region = SUSTAIN;
         }
     }
 
     // if in the sustain region, check for the start of release
     else if(current_region == SUSTAIN) {
+        // release: 3 consecutive frames with decreasing energy and
+        //          spectral centroid below average
+        if((rms_ma_value <= 0.8 * peak_amp &&
+            util::decreasing(n_prev_amp_ma_values, prev_amp_ma_values) &&
+            centroid < centroid_cma) ||
+           (rms_ma_value <= 0.33 * peak_amp)) {
+            current_region = RELEASE;
+        }
     }
 
     // if in the release region, check for the offset
     else if(current_region == RELEASE) {
     }
 
-    util::rotate(n_prev_odf_values, prev_odf_values, odf_value);
-    util::rotate(n_prev_amp_ma_values, prev_amp_ma_values, rms_ma_value);
+    n_frames += 1;
+    prev_centroid_cma = centroid_cma;
 
     return current_region;
 }

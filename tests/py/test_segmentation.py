@@ -65,6 +65,8 @@ class TestSegmentation(object):
                 c_segments['onset'] = i
             elif not 'sustain' in c_segments and s == glt.SUSTAIN:
                 c_segments['sustain'] = i
+            elif not 'release' in c_segments and s == glt.RELEASE:
+                c_segments['release'] = i
             i += self.hop_size
 
         print py_segments
