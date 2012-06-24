@@ -38,9 +38,9 @@ class TestSegmentation(object):
         metadata = {'sampling_rate': 44100}
 
         i = 0
-        while i < len(self.audio):
+        while i < len(self.audio) - self.frame_size:
             f = self.audio[i:i + self.hop_size]
-            py_sc = ns.segmentation.spectral_centroid(f, metadata)[-1]
+            py_sc = ns.segmentation.spectral_centroid(f, metadata)
             c_sc = glt.spectral_centroid(f)
             nt.assert_almost_equals(py_sc, c_sc, self.float_precision)
             i += self.hop_size
