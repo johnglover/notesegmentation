@@ -46,11 +46,12 @@ def spectral_centroid(audio, metadata):
 
     num_bins = (frame_size / 2) + 1
     freqs = np.linspace(0.0, float(metadata['sampling_rate']) / 2, num_bins)
-    sc = np.zeros(len(audio))
+    sc = []
 
     p = 0
     while p <= len(audio) - frame_size:
         frame = audio[p:p + frame_size]
+        centroid = 0.0
 
         window = np.hamming(frame_size)
         f = np.fft.rfft(frame * window)
@@ -58,11 +59,11 @@ def spectral_centroid(audio, metadata):
 
         if sum(magnitudes):
             centroid = sum(freqs * magnitudes) / sum(magnitudes)
-            start = p - 1 if p else 0
-            sc[p:p + frame_size] += np.linspace(sc[start], centroid, hop_size)
+
+        sc.append(centroid)
         p += hop_size
 
-    return sc
+    return np.array(sc)
 
 
 def _effort_times(s, thresholds):
@@ -177,7 +178,8 @@ def cbr(audio, metadata, verbose=False):
 
         # end of attack: first local minima (in spectral centroid)
         # between onset and sustain
-        boundaries['end_attack'] = min(sustain, util.next_minima(sc, onset))
+        sc_minima = util.next_minima(sc, onset / 512) * 512
+        boundaries['end_attack'] = min(sustain, sc_minima)
 
         # start of release:  using a modified version of Peeters'
         # efforts method (in reverse)
@@ -231,7 +233,7 @@ def glt(audio, metadata, verbose=False):
     env = ae.rms_frame(audio, n=env_hop_size)
     env_no_ma = ae.rms_frame(audio, n=env_hop_size, m=1)
     sc = spectral_centroid(audio, metadata)
-    cma = util.cumulative_moving_average(sc)
+    centroid_cma = util.cumulative_moving_average(sc)
 
     for onset_number, onset in enumerate(onsets):
         # if time to prev onset is < 200 ms, ignore this onset
@@ -263,10 +265,11 @@ def glt(audio, metadata, verbose=False):
         #          spectral centroid below average
         r = util.next_maxima(env, onset_frame)
         peak_amp = env[r]
-        for i in range(r, len(env)):
+        for i in range(r, len(env) - 1):
             peak_amp = max(peak_amp, env[i])
-            if (env[i] <= 0.8 * peak_amp) and util.decreasing(env, i, 5)\
-               and (sc[i * env_hop_size] < cma[i * env_hop_size]):
+            if (env[i] <= (0.8 * peak_amp) and
+                util.decreasing(env, i, 5) and
+                sc[i] < centroid_cma[i]):
                 boundaries['release'] = i * env_hop_size
                 break
             elif env[i] <= 0.33 * peak_amp:
