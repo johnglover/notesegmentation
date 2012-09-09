@@ -19,4 +19,6 @@ Installation
 
 To install the module in your Python site-packages directory:
 
+::
+
     $ python setup.py install
