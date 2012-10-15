@@ -3,39 +3,19 @@ import simpl
 import util
 
 
-def get_partials(audio, metadata, frame_size=512,
-                 hop_size=512, num_partials=60):
-    """
-    Perform sinusoidal analysis on a given audio signal (using SMS).
-    Return a list of frames (which contain ordered lists of partials).
-    """
-    pd = simpl.SMSPeakDetection()
-    pd.max_peaks = num_partials
-    pd.frame_size = frame_size
-    pd.hop_size = hop_size
-    peaks = pd.find_peaks(audio)
-    pt = simpl.SMSPartialTracking()
-    pt.max_frame_delay = 145
-    pt.analysis_delay = 100
-    pt.min_good_frames = 3
-    pt.clean_tracks = 1
-    pt.max_partials = num_partials
-    return pt.find_partials(peaks)
-
-
 def _is_active(partial):
-    """
+    '''
     Return True if partial is active.
-    """
-    return partial.amplitude > 1e-3
+    '''
+    return partial.amplitude > 0
 
 
 def _deviation(partial1, partial2):
-    """
+    '''
     Return the deviation between two partials.
     This is the difference in the log (to base 2) of their frequency values,
     multiplied by their amplitudes.
-    """
+    '''
     if partial1.frequency < 1e-6:
         deviation = np.log2(partial2.frequency)
     elif partial2.frequency < 1e-6:
@@ -48,11 +28,24 @@ def _deviation(partial1, partial2):
 
 def get_stability(audio, metadata, frame_size=512, hop_size=512,
                   num_partials=60, stretched=False):
-    """
+    '''
     Return a partial stability signal (as a numpy array) for a
     given audio signal.
-    """
-    frames = get_partials(audio, metadata, frame_size, hop_size)
+    '''
+    pd = simpl.SMSPeakDetection()
+    pd.max_peaks = num_partials
+    pd.frame_size = frame_size
+    pd.hop_size = hop_size
+    peaks = pd.find_peaks(audio)
+    pt = simpl.SMSPartialTracking()
+    pt.max_frame_delay = 145
+    pt.analysis_delay = 100
+    pt.min_good_frames = 3
+    pt.clean_tracks = 1
+    pt.harmonic = True
+    pt.max_partials = num_partials
+    frames = pt.find_partials(peaks)
+
     deviations = np.zeros(len(audio))
     non_stretched_deviations = []
 
@@ -61,9 +54,11 @@ def get_stability(audio, metadata, frame_size=512, hop_size=512,
         f1 = frames[frame_number - 1]
         f2 = frames[frame_number]
         avg = 0.0
+        partials1 = f1.partials
+        partials2 = f2.partials
         for i in range(num_partials):
-            if _is_active(f1.partials[i]) or _is_active(f2.partials[i]):
-                avg += _deviation(f2.partials[i], f1.partials[i])
+            if _is_active(partials1[i]) or _is_active(partials2[i]):
+                avg += _deviation(partials2[i], partials1[i])
         avg /= num_partials
         non_stretched_deviations.append(avg)
         start = deviations[frame_number - 1 if frame_number else 0]
@@ -78,7 +73,7 @@ def get_stability(audio, metadata, frame_size=512, hop_size=512,
 
 def get_transients(audio, metadata, frame_size=256,
                    hop_size=128, num_partials=10):
-    """
+    '''
     Return a list of transient regions in a given audio signal.
 
     Transient start: onset location
@@ -90,7 +85,7 @@ def get_transients(audio, metadata, frame_size=256,
 
     Returns a dictionary of the form:
         {'start': <int>, 'end': <int>}
-    """
+    '''
     sampling_rate = int(metadata.get('sampling_rate', 44100))
     transients = []
     stability = get_stability(audio, metadata, frame_size,
@@ -121,12 +116,15 @@ def get_transients(audio, metadata, frame_size=256,
         close_peaks = []
         last_peak = transient_peak
         for p in candidate_peaks:
-            if (np.abs(p - last_peak) <= 10) and stability[p] >= (0.25 * peak_value):
+            if (np.abs(p - last_peak) <= 10) and \
+                stability[p] >= (0.25 * peak_value):
                 close_peaks.append(p)
                 last_peak = p
         last_peak = transient_peak if not close_peaks else close_peaks[-1]
-        transient['end'] = min(onset + ((sampling_rate / 1000) * 200),
-                               util.next_minima(stability, last_peak) * hop_size)
+        transient['end'] = min(
+            onset + ((sampling_rate / 1000) * 200),
+            util.next_minima(stability, last_peak) * hop_size
+        )
 
         transients.append(transient)
 
