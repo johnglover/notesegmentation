@@ -27,7 +27,7 @@ def _deviation(partial1, partial2):
 
 
 def get_stability(audio, metadata, frame_size=512, hop_size=512,
-                  num_partials=60, stretched=False):
+                  num_partials=60):
     '''
     Return a partial stability signal (as a numpy array) for a
     given audio signal.
@@ -46,10 +46,8 @@ def get_stability(audio, metadata, frame_size=512, hop_size=512,
     pt.max_partials = num_partials
     frames = pt.find_partials(peaks)
 
-    deviations = np.zeros(len(audio))
-    non_stretched_deviations = []
+    deviations = []
 
-    p = 0
     for frame_number in range(1, len(frames)):
         f1 = frames[frame_number - 1]
         f2 = frames[frame_number]
@@ -60,15 +58,11 @@ def get_stability(audio, metadata, frame_size=512, hop_size=512,
             if _is_active(partials1[i]) or _is_active(partials2[i]):
                 avg += _deviation(partials2[i], partials1[i])
         avg /= num_partials
-        non_stretched_deviations.append(avg)
-        start = deviations[frame_number - 1 if frame_number else 0]
-        deviations[p:p + hop_size] = np.linspace(start, avg, hop_size)
-        p += hop_size
+        deviations.append(avg)
 
-    if stretched:
-        return deviations
-    else:
-        return np.array(non_stretched_deviations)
+    deviations = np.array(deviations[pt.max_frame_delay:])
+    deviations = np.hstack((deviations, np.zeros(pt.max_frame_delay)))
+    return deviations
 
 
 def get_transients(audio, metadata, frame_size=256,
@@ -88,8 +82,8 @@ def get_transients(audio, metadata, frame_size=256,
     '''
     sampling_rate = int(metadata.get('sampling_rate', 44100))
     transients = []
-    stability = get_stability(audio, metadata, frame_size,
-                              hop_size, num_partials, False)
+    stability = get_stability(audio, metadata, frame_size, hop_size,
+                              num_partials)
     peaks = util.find_peaks(stability, np.mean(stability))
 
     for onset in metadata['onsets']:
