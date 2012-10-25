@@ -3,17 +3,6 @@ import segmentation
 import partial_stability
 import util
 
-try:
-    import _amplitude_envelopes as ae
-except ImportError:
-    pass
-
-try:
-    import _segmentation as s
-except ImportError:
-    pass
-
-try:
-    import _util as u
-except ImportError:
-    pass
+import _amplitude_envelopes as ae
+import _segmentation as s
+import _util as u

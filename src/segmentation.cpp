@@ -1,6 +1,6 @@
 #include "segmentation.h"
 
-GLT::GLT() : MIN_ONSET_GAP_MS(200) {
+RTSegmentation::RTSegmentation() : MIN_ONSET_GAP_MS(200) {
     hop_size = 512;
     frame_size = 512;
     sampling_rate = 44100;
@@ -51,7 +51,7 @@ GLT::GLT() : MIN_ONSET_GAP_MS(200) {
     prev_centroid_cma = 0.f;
 }
 
-GLT::~GLT() {
+RTSegmentation::~RTSegmentation() {
     delete odf;
     delete od;
 
@@ -69,11 +69,11 @@ GLT::~GLT() {
 }
 
 // Clear all stored values so ready for new note
-void GLT::reset() {
+void RTSegmentation::reset() {
 }
 
 // Return the spectral centroid for a given frame of audio
-sample GLT::spectral_centroid(int n, sample* audio) {
+sample RTSegmentation::spectral_centroid(int n, sample* audio) {
     sample centroid = 0.f;
     sample freqs_amps_sum = 0.f;
     sample amps_sum = 0.f;
@@ -97,7 +97,7 @@ sample GLT::spectral_centroid(int n, sample* audio) {
     return centroid;
 }
 
-int GLT::segment(int n, sample* audio) {
+int RTSegmentation::segment(int n, sample* audio) {
     sample odf_value = odf->process_frame(frame_size, audio);
     sample centroid = spectral_centroid(frame_size, audio);
     sample centroid_cma = util::cumulative_moving_average(n_frames, centroid, prev_centroid_cma);

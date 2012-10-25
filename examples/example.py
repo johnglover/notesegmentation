@@ -17,7 +17,7 @@ metadata = {'sampling_rate': sampling_rate}
 fig = plt.figure(1, figsize=(14, 9))
 plt.plot(np.abs(audio), '0.4')
 
-g = ns.segmentation.glt(audio, metadata)
+g = ns.segmentation.rtsegmentation(audio, metadata)
 for note in g:
     for boundary_name, boundary in note.iteritems():
         plt.axvline(boundary, c='r', linestyle='--')

@@ -14,7 +14,7 @@ typedef double sample;
 enum NoteRegion {NONE, ONSET, ATTACK, SUSTAIN, RELEASE, OFFSET};
 
 
-class GLT {
+class RTSegmentation {
     private:
         const int MIN_ONSET_GAP_MS;  // in ms
         int min_onset_gap;  // in samples
@@ -55,8 +55,8 @@ class GLT {
         sample prev_centroid_cma;
 
     public:
-        GLT();
-        ~GLT();
+        RTSegmentation();
+        ~RTSegmentation();
 
         void reset();
         sample spectral_centroid(int n, sample* audio);

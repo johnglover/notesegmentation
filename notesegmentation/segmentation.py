@@ -98,8 +98,6 @@ def cbr(audio, metadata, verbose=False):
         Musical Instrument Sounds Using Spectro-Temporal Cues.
         In Proc. DAFx 2010
 
-    Available online at: http://recherche.ircam.fr/anasyn/caetano/docs/caetano_segmentation_DAFx2010.pdf
-
     Returns a list of dictionaries (one for each note) with the following keys:
     * onset
     * end_attack
@@ -164,7 +162,8 @@ def cbr(audio, metadata, verbose=False):
         max_env = np.max(env[onset:max_transient])
         max_env_loc = np.argmax(env[onset:max_transient]) + onset
         effort_thresholds = np.linspace(0, max_env, 10)
-        effort_times = _effort_times(env[onset:max_env_loc], effort_thresholds) + onset
+        effort_times = \
+            _effort_times(env[onset:max_env_loc], effort_thresholds) + onset
         efforts = np.diff(effort_times)
         w = np.mean(efforts)
         M = len(efforts[efforts > w])  # no. efforts greater than mean
@@ -203,7 +202,7 @@ def cbr(audio, metadata, verbose=False):
     return notes
 
 
-def glt(audio, metadata, verbose=False):
+def rtsegmentation(audio, metadata, verbose=False):
     """
     Implementation of real-time automatic note segmentation, as described in:
         Glover, J., Lazzarini, V., and Timoney, J.

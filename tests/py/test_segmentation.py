@@ -34,14 +34,14 @@ class TestSegmentation(object):
         assert M == 1
 
     def test_spectral_centroid(self):
-        glt = ns.s.GLT()
+        rt = ns.s.RTSegmentation()
         metadata = {'sampling_rate': 44100}
 
         i = 0
         while i < len(self.audio) - self.frame_size:
             f = self.audio[i:i + self.hop_size]
             py_sc = ns.segmentation.spectral_centroid(f, metadata)
-            c_sc = glt.spectral_centroid(f)
+            c_sc = rt.spectral_centroid(f)
             nt.assert_almost_equals(py_sc, c_sc, self.float_precision)
             i += self.hop_size
 
@@ -52,22 +52,22 @@ class TestSegmentation(object):
                     'odf_frame_size': 512,
                     'odf_hop_size': 512,
                     'env_hop_size': 512}
-        py_segments = ns.segmentation.glt(self.audio, metadata)[0]
+        py_segments = ns.segmentation.rtsegmentation(self.audio, metadata)[0]
 
         c_segments = {}
-        glt = ns.s.GLT()
+        rt = ns.s.RTSegmentation()
 
         i = 0
         while i < len(self.audio):
             f = self.audio[i:i + self.frame_size]
-            s = glt.segment(f)
-            if not 'onset' in c_segments and s == glt.ONSET:
+            s = rt.segment(f)
+            if not 'onset' in c_segments and s == rt.ONSET:
                 c_segments['onset'] = i
-            elif not 'sustain' in c_segments and s == glt.SUSTAIN:
+            elif not 'sustain' in c_segments and s == rt.SUSTAIN:
                 c_segments['sustain'] = i
-            elif not 'release' in c_segments and s == glt.RELEASE:
+            elif not 'release' in c_segments and s == rt.RELEASE:
                 c_segments['release'] = i
-            elif not 'offset' in c_segments and s == glt.OFFSET:
+            elif not 'offset' in c_segments and s == rt.OFFSET:
                 c_segments['offset'] = i
             i += self.hop_size
 
