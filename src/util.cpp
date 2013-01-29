@@ -1,5 +1,7 @@
 #include "util.h"
 
+using namespace util;
+
 // Set the first value in a to new_value and rotate the rest of the values
 void util::rotate(int n, sample* a, sample new_value) {
     for(int i = n - 1; i > 0; i--) {

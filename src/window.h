@@ -1,12 +1,12 @@
-#ifndef _WINDOWS_H
-#define _WINDOWS_H
+#ifndef NOTESEGMENTATION_WINDOWS_H
+#define NOTESEGMENTATION_WINDOWS_H
 
 #include <math.h>
 
-typedef double sample;
-
 namespace windows
 {
+
+typedef double sample;
 
 void window(int window_size, sample* window, sample* audio);
 void hann(int window_size, sample* window);

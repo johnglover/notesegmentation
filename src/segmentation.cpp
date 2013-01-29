@@ -1,93 +1,151 @@
 #include "segmentation.h"
 
+using namespace notesegmentation;
+
 RTSegmentation::RTSegmentation() : MIN_ONSET_GAP_MS(200) {
-    hop_size = 512;
-    frame_size = 512;
-    sampling_rate = 44100;
-    num_bins = (frame_size / 2) + 1;
+    _hop_size = 512;
+    _frame_size = 512;
+    _sampling_rate = 44100;
+    _num_bins = (_frame_size / 2) + 1;
 
-    min_onset_gap = (sampling_rate * MIN_ONSET_GAP_MS) / 1000;
-    current_onset_gap = 0;
+    _min_onset_gap = (_sampling_rate * MIN_ONSET_GAP_MS) / 1000;
+    _current_onset_gap = 0;
 
-    current_region = NONE;
+    _current_region = NONE;
 
-    odf = new PeakAmpDifferenceODF();
-    odf->set_hop_size(hop_size);
-    odf->set_frame_size(frame_size);
+    _odf = new PeakAmpDifferenceODF();
+    _odf->set_hop_size(_hop_size);
+    _odf->set_frame_size(_frame_size);
 
-    od = new RTOnsetDetection();
+    _od = new RTOnsetDetection();
 
-    freqs = new sample[num_bins];
-    sample base_freq = (sample)sampling_rate / (sample)frame_size;
-    for(int bin = 0; bin < num_bins; bin++) {
-        freqs[bin] = bin * base_freq;
+    _freqs = new sample[_num_bins];
+    sample base_freq = (sample)_sampling_rate / (sample)_frame_size;
+    for(int bin = 0; bin < _num_bins; bin++) {
+        _freqs[bin] = bin * base_freq;
     }
 
-    window = new sample[frame_size];
-    windows::hamming(frame_size, window);
+    _window = new sample[_frame_size];
+    windows::hamming(_frame_size, _window);
 
-    fft_in = (sample*) fftw_malloc(sizeof(sample) * frame_size);
-    fft_out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * num_bins);
-	p = fftw_plan_dft_r2c_1d(frame_size, fft_in, fft_out, FFTW_ESTIMATE);
+    _fft_in = (sample*) fftw_malloc(sizeof(sample) * _frame_size);
+    _fft_out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * _num_bins);
+	_plan = fftw_plan_dft_r2c_1d(_frame_size, _fft_in,
+                                 _fft_out, FFTW_ESTIMATE);
 
-    peak_rms = 0.f;
-    peak_amp = 0.f;
+    _peak_rms = 0.f;
+    _peak_amp = 0.f;
 
-    n_prev_odf_values = 2;
-    n_prev_amp_values = 3;
-    n_prev_amp_ma_values = 5;
-    n_amp_mean_values = 3;
-    n_prev_centroid_values = 2;
-    prev_odf_values = new sample[n_prev_odf_values];
-    prev_amp_values = new sample[n_prev_amp_values];
-    prev_amp_ma_values = new sample[n_prev_amp_ma_values];
-    prev_centroid_values = new sample[n_prev_centroid_values];
-    memset(prev_odf_values, 0.0, sizeof(sample) * n_prev_odf_values);
-    memset(prev_amp_values, 0.0, sizeof(sample) * n_prev_amp_values);
-    memset(prev_amp_ma_values, 0.0, sizeof(sample) * n_prev_amp_ma_values);
-    memset(prev_centroid_values, 0.0, sizeof(sample) * n_prev_centroid_values);
+    _n_prev_odf_values = 2;
+    _n_prev_amp_values = 3;
+    _n_prev_amp_ma_values = 5;
+    _n_amp_mean_values = 3;
+    _n_prev_centroid_values = 2;
+    _prev_odf_values = new sample[_n_prev_odf_values];
+    _prev_amp_values = new sample[_n_prev_amp_values];
+    _prev_amp_ma_values = new sample[_n_prev_amp_ma_values];
+    _prev_centroid_values = new sample[_n_prev_centroid_values];
+    memset(_prev_odf_values, 0.0, sizeof(sample) * _n_prev_odf_values);
+    memset(_prev_amp_values, 0.0, sizeof(sample) * _n_prev_amp_values);
+    memset(_prev_amp_ma_values, 0.0, sizeof(sample) * _n_prev_amp_ma_values);
+    memset(_prev_centroid_values, 0.0,
+           sizeof(sample) * _n_prev_centroid_values);
 
-    n_frames = 0;
-    prev_centroid_cma = 0.f;
+    _n_frames = 0;
+    _prev_centroid_cma = 0.f;
 }
 
 RTSegmentation::~RTSegmentation() {
-    delete odf;
-    delete od;
+    if(_odf) {
+        delete _odf;
+        _odf = NULL;
+    }
+    if(_od) {
+        delete _od;
+        _od = NULL;
+    }
+    if(_window) {
+        delete [] _window;
+        _window = NULL;
+    }
+    if(_freqs) {
+        delete [] _freqs;
+        _freqs = NULL;
+    }
 
-    delete [] window;
-    delete [] freqs;
+    if(_fft_in) {
+        fftw_free(_fft_in);
+        _fft_in = NULL;
+    }
+    if(_fft_out) {
+        fftw_free(_fft_out);
+        _fft_out = NULL;
+    }
+    fftw_destroy_plan(_plan);
 
-    if(fft_in) fftw_free(fft_in);
-    if(fft_out) fftw_free(fft_out);
-    fftw_destroy_plan(p);
-
-    delete [] prev_odf_values;
-    delete [] prev_amp_values;
-    delete [] prev_amp_ma_values;
-    delete [] prev_centroid_values;
+    if(_prev_odf_values) {
+        delete [] _prev_odf_values;
+        _prev_odf_values = NULL;
+    }
+    if(_prev_amp_values) {
+        delete [] _prev_amp_values;
+        _prev_amp_values = NULL;
+    }
+    if(_prev_amp_ma_values) {
+        delete [] _prev_amp_ma_values;
+        _prev_amp_ma_values = NULL;
+    }
+    if(_prev_centroid_values) {
+        delete [] _prev_centroid_values;
+        _prev_centroid_values = NULL;
+    }
 }
 
 // Clear all stored values so ready for new note
 void RTSegmentation::reset() {
+    _odf->reset();
+}
+
+int RTSegmentation::frame_size() {
+    return _frame_size;
+}
+
+void RTSegmentation::frame_size(int frame_size) {
+    _frame_size = frame_size;
+    _odf->set_frame_size(frame_size);
+}
+
+int RTSegmentation::hop_size() {
+    return _hop_size;
+}
+
+void RTSegmentation::hop_size(int hop_size) {
+    _hop_size = hop_size;
+    _odf->set_hop_size(hop_size);
 }
 
 // Return the spectral centroid for a given frame of audio
 sample RTSegmentation::spectral_centroid(int n, sample* audio) {
+    if(n != _frame_size) {
+        throw Exception(std::string("Size of spectral centroid not ") +
+                        std::string("equal to segmentation frame size"));
+        return 0.f;
+    }
+
     sample centroid = 0.f;
     sample freqs_amps_sum = 0.f;
     sample amps_sum = 0.f;
     sample amp = 0.f;
 
-    memcpy(fft_in, &audio[0], sizeof(sample)*frame_size);
-    windows::window(frame_size, window, fft_in);
-    fftw_execute(p);
+    memcpy(_fft_in, &audio[0], sizeof(sample) * _frame_size);
+    windows::window(_frame_size, _window, _fft_in);
+    fftw_execute(_plan);
 
-    for(int bin = 0; bin < num_bins; bin++) {
-        amp = sqrt((fft_out[bin][0] * fft_out[bin][0]) +
-                   (fft_out[bin][1] * fft_out[bin][1]));
+    for(int bin = 0; bin < _num_bins; bin++) {
+        amp = sqrt((_fft_out[bin][0] * _fft_out[bin][0]) +
+                   (_fft_out[bin][1] * _fft_out[bin][1]));
         amps_sum += amp;
-        freqs_amps_sum += freqs[bin] * amp;
+        freqs_amps_sum += _freqs[bin] * amp;
     }
 
     if(amps_sum > 0.f) {
@@ -98,76 +156,84 @@ sample RTSegmentation::spectral_centroid(int n, sample* audio) {
 }
 
 int RTSegmentation::segment(int n, sample* audio) {
-    sample odf_value = odf->process_frame(frame_size, audio);
-    sample centroid = spectral_centroid(frame_size, audio);
-    sample centroid_cma = util::cumulative_moving_average(n_frames, centroid, prev_centroid_cma);
+    if(n != _frame_size) {
+        throw Exception(std::string("Size of audio frame not ") +
+                        std::string("equal to segmentation frame size"));
+        return NONE;
+    }
 
-    sample rms_value = rms(frame_size, audio);
-    util::rotate(n_prev_amp_values, prev_amp_values, rms_value);
+    sample odf_value = _odf->process_frame(_frame_size, audio);
+    sample centroid = spectral_centroid(_frame_size, audio);
+    sample centroid_cma = util::cumulative_moving_average(
+        _n_frames, centroid, _prev_centroid_cma
+    );
 
-    sample rms_ma_value = mean(n_amp_mean_values, prev_amp_values);
+    sample rms_value = rms(_frame_size, audio);
+    util::rotate(_n_prev_amp_values, _prev_amp_values, rms_value);
 
-    for(int i = 0; i < frame_size; i++) {
-        if(fabs(audio[i]) > peak_amp) {
-            peak_amp = fabs(audio[i]);
+    sample rms_ma_value = mean(_n_amp_mean_values, _prev_amp_values);
+
+    for(int i = 0; i < _frame_size; i++) {
+        if(fabs(audio[i]) > _peak_amp) {
+            _peak_amp = fabs(audio[i]);
         }
     }
-    if(rms_ma_value > peak_rms) {
-        peak_rms = rms_ma_value;
+    if(rms_ma_value > _peak_rms) {
+        _peak_rms = rms_ma_value;
     }
 
-    bool is_odf_minima = util::is_minima(odf_value, 1, prev_odf_values);
-    bool is_rms_maxima = util::is_maxima(rms_ma_value, 1, prev_amp_ma_values);
+    bool is_odf_minima = util::is_minima(odf_value, 1, _prev_odf_values);
+    bool is_rms_maxima = util::is_maxima(rms_ma_value, 1, _prev_amp_ma_values);
 
-    util::rotate(n_prev_odf_values, prev_odf_values, odf_value);
-    util::rotate(n_prev_amp_ma_values, prev_amp_ma_values, rms_ma_value);
+    util::rotate(_n_prev_odf_values, _prev_odf_values, odf_value);
+    util::rotate(_n_prev_amp_ma_values, _prev_amp_ma_values, rms_ma_value);
 
     // update onset and offset, as they can only last for 1 frame
-    if(current_region == ONSET) {
-        current_region = ATTACK;
+    if(_current_region == ONSET) {
+        _current_region = ATTACK;
     }
-    else if(current_region == OFFSET) {
-        current_region = NONE;
+    else if(_current_region == OFFSET) {
+        _current_region = NONE;
     }
 
-    current_onset_gap += frame_size;
+    _current_onset_gap += _frame_size;
 
-    if(od->is_onset(odf_value)) {
+    if(_od->is_onset(odf_value)) {
         // if not too close to a previous onset, start a new note attack
-        if(current_onset_gap >= min_onset_gap) {
-            current_onset_gap = 0;
-            current_region = ONSET;
+        if(_current_onset_gap >= _min_onset_gap) {
+            _current_onset_gap = 0;
+            _current_region = ONSET;
         }
     }
 
-    if(current_region == ATTACK) {
+    if(_current_region == ATTACK) {
         // transient/attack: from onset until next minima in odf,
         // unless amp local max reached first
         if(is_odf_minima || is_rms_maxima) {
-            current_region = SUSTAIN;
+            _current_region = SUSTAIN;
         }
     }
-    else if(current_region == SUSTAIN) {
+    else if(_current_region == SUSTAIN) {
         // release: 3 consecutive frames with decreasing energy and
         //          spectral centroid below average
-        if((rms_ma_value <= 0.8 * peak_rms &&
-            util::decreasing(n_prev_amp_ma_values, prev_amp_ma_values) &&
+        if((rms_ma_value <= 0.8 * _peak_rms &&
+            util::decreasing(_n_prev_amp_ma_values, _prev_amp_ma_values) &&
             centroid < centroid_cma) ||
-           (rms_ma_value <= 0.33 * peak_rms)) {
-            current_region = RELEASE;
+           (rms_ma_value <= 0.33 * _peak_rms)) {
+            _current_region = RELEASE;
         }
     }
-    else if(current_region == RELEASE) {
+    else if(_current_region == RELEASE) {
         // offset: point (after sustain) at which envelope <=-60db
         //         below peak value
-        sample offset_threshold = 0.001 * peak_amp;
+        sample offset_threshold = 0.001 * _peak_amp;
         if(rms_value <= offset_threshold) {
-            current_region = OFFSET;
+            _current_region = OFFSET;
         }
     }
 
-    n_frames += 1;
-    prev_centroid_cma = centroid_cma;
+    _n_frames += 1;
+    _prev_centroid_cma = centroid_cma;
 
-    return current_region;
+    return _current_region;
 }

@@ -1,10 +1,12 @@
-#ifndef _UTIL_H
-#define _UTIL_H
+#ifndef NOTESEGMENTATION_UTIL_H
+#define NOTESEGMENTATION_UTIL_H
 
-typedef double sample;
 
 namespace util
 {
+
+typedef double sample;
+
 // Set the first value in a to new_value and rotate the rest of the values
 void rotate(int n, sample* a, sample new_value);
 

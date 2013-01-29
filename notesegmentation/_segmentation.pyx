@@ -8,7 +8,7 @@ ctypedef np.double_t dtype_t
 
 
 cdef extern from "../src/segmentation.h":
-    cdef cppclass c_RTSegmentation "RTSegmentation":
+    cdef cppclass c_RTSegmentation "notesegmentation::RTSegmentation":
         c_Frame()
         c_Frame(int frame_size)
         double spectral_centroid(int n, double* audio)
