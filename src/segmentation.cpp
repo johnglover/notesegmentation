@@ -3,35 +3,21 @@
 using namespace notesegmentation;
 
 RTSegmentation::RTSegmentation() : MIN_ONSET_GAP_MS(200) {
-    _hop_size = 512;
-    _frame_size = 512;
+    _odf = new PeakAmpDifferenceODF();
+    _od = new RTOnsetDetection();
+
+    _freqs = NULL;
+    _window = NULL;
+    _fft_in = NULL;
+    _fft_out = NULL;
+
     _sampling_rate = 44100;
-    _num_bins = (_frame_size / 2) + 1;
+    hop_size(512);
+    frame_size(512);
 
     _min_onset_gap = (_sampling_rate * MIN_ONSET_GAP_MS) / 1000;
     _current_onset_gap = 0;
-
     _current_region = NONE;
-
-    _odf = new PeakAmpDifferenceODF();
-    _odf->set_hop_size(_hop_size);
-    _odf->set_frame_size(_frame_size);
-
-    _od = new RTOnsetDetection();
-
-    _freqs = new sample[_num_bins];
-    sample base_freq = (sample)_sampling_rate / (sample)_frame_size;
-    for(int bin = 0; bin < _num_bins; bin++) {
-        _freqs[bin] = bin * base_freq;
-    }
-
-    _window = new sample[_frame_size];
-    windows::hamming(_frame_size, _window);
-
-    _fft_in = (sample*) fftw_malloc(sizeof(sample) * _frame_size);
-    _fft_out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * _num_bins);
-	_plan = fftw_plan_dft_r2c_1d(_frame_size, _fft_in,
-                                 _fft_out, FFTW_ESTIMATE);
 
     _peak_rms = 0.f;
     _peak_amp = 0.f;
@@ -112,7 +98,37 @@ int RTSegmentation::frame_size() {
 
 void RTSegmentation::frame_size(int frame_size) {
     _frame_size = frame_size;
-    _odf->set_frame_size(frame_size);
+    _num_bins = (_frame_size / 2) + 1;
+
+    if(_freqs) {
+        delete [] _freqs;
+    }
+    _freqs = new sample[_num_bins];
+    sample base_freq = (sample)_sampling_rate / (sample)_frame_size;
+    for(int bin = 0; bin < _num_bins; bin++) {
+        _freqs[bin] = bin * base_freq;
+    }
+
+    if(_window) {
+        delete [] _window;
+    }
+    _window = new sample[_frame_size];
+    windows::hamming(_frame_size, _window);
+
+    if(_fft_in) {
+        fftw_free(_fft_in);
+    }
+    _fft_in = (sample*) fftw_malloc(sizeof(sample) * _frame_size);
+
+    if(_fft_out) {
+        fftw_free(_fft_out);
+    }
+    _fft_out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * _num_bins);
+
+	_plan = fftw_plan_dft_r2c_1d(_frame_size, _fft_in,
+                                 _fft_out, FFTW_ESTIMATE);
+
+    _odf->set_frame_size(_frame_size);
 }
 
 int RTSegmentation::hop_size() {
