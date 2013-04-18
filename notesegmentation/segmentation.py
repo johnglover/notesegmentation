@@ -10,13 +10,14 @@ class NoOnsetsFound(Exception):
 
 
 def odf(audio, metadata, return_odf=False):
-    frame_size = metadata.get('odf_frame_size', 2048)
-    hop_size = metadata.get('odf_hop_size', 512)
+    frame_size = int(metadata.get('odf_frame_size', 2048))
+    hop_size = int(metadata.get('odf_hop_size', 512))
+    sampling_rate = int(metadata.get('sampling_rate', 44100))
 
     o = modal.PeakAmpDifferenceODF()
     o.set_frame_size(frame_size)
     o.set_hop_size(hop_size)
-    o.set_sampling_rate(metadata['sampling_rate'])
+    o.set_sampling_rate(sampling_rate)
 
     onsets = []
     odf_values = []
@@ -41,11 +42,12 @@ def odf(audio, metadata, return_odf=False):
 
 
 def spectral_centroid(audio, metadata):
-    frame_size = metadata.get('spectral_centroid_frame_size', 512)
-    hop_size = metadata.get('spectral_centroid_hop_size', 512)
+    frame_size = int(metadata.get('spectral_centroid_frame_size', 512))
+    hop_size = int(metadata.get('spectral_centroid_hop_size', 512))
+    sampling_rate = int(metadata.get('sampling_rate', 44100))
 
     num_bins = (frame_size / 2) + 1
-    freqs = np.linspace(0.0, float(metadata['sampling_rate']) / 2, num_bins)
+    freqs = np.linspace(0.0, float(sampling_rate) / 2, num_bins)
     sc = []
 
     p = 0
