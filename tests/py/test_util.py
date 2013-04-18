@@ -16,7 +16,8 @@ class TestUtils(object):
         assert a == np.array([3.0]), a
         a = ns.util.cumulative_moving_average(np.array([1.0, 2.0, 3.0]))
         assert np.all(a == np.array([1.0, 1.5, 2.0])), a
-        a = ns.util.cumulative_moving_average(np.array([1.0, 2.0, 3.0, 4.0, 5.0]))
+        a = ns.util.cumulative_moving_average(
+            np.array([1.0, 2.0, 3.0, 4.0, 5.0]))
         assert np.all(a == np.array([1.0, 1.5, 2.0, 2.5, 3])), a
 
     def test_c_cumulative_moving_average(self):
