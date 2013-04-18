@@ -3,6 +3,7 @@
 *.egg-info
 *.swp
 *.so
+.DS_Store
 build
 build_release
 docs/_build
