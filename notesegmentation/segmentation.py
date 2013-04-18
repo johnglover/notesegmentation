@@ -266,12 +266,11 @@ def rtsegmentation(audio, metadata, verbose=False):
         peak_amp = env[r]
         for i in range(r, len(env) - 1):
             peak_amp = max(peak_amp, env[i])
-            if (env[i] <= (0.8 * peak_amp) and
-                util.decreasing(env, i, 5) and
-                sc[i] < centroid_cma[i]):
-                boundaries['release'] = i * env_hop_size
-                break
-            elif env[i] <= 0.33 * peak_amp:
+            is_release = ((env[i] <= (0.8 * peak_amp) and
+                           util.decreasing(env, i, 5) and
+                           sc[i] < centroid_cma[i]) or
+                          env[i] <= 0.33 * peak_amp)
+            if is_release:
                 boundaries['release'] = i * env_hop_size
                 break
 
