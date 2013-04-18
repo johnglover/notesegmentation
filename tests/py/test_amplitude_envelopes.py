@@ -9,7 +9,7 @@ class TestAmplitudeEnvelopes(object):
     float_precision = 5
     frame_size = 512
     audio_path = os.path.join(
-        os.path.dirname(__file__), '../clarinet-C-octave0.wav'
+        os.path.dirname(__file__), '../audio/clarinet.wav'
     )
 
     @classmethod

@@ -10,7 +10,7 @@ class TestSegmentation(object):
     hop_size = 512
     frame_size = 2048
     audio_path = os.path.join(
-        os.path.dirname(__file__), '../clarinet-C-octave0.wav'
+        os.path.dirname(__file__), '../audio/clarinet.wav'
     )
 
     @classmethod
