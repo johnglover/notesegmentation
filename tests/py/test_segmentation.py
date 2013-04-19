@@ -8,7 +8,7 @@ import notesegmentation as ns
 class TestSegmentation(object):
     float_precision = 5
     hop_size = 512
-    frame_size = 2048
+    frame_size = 512
     audio_path = os.path.join(
         os.path.dirname(__file__), '../audio/clarinet.wav'
     )
@@ -60,7 +60,11 @@ class TestSegmentation(object):
         i = 0
         while i < len(self.audio):
             f = self.audio[i:i + self.frame_size]
+            if len(f) < self.frame_size:
+                f = np.hstack((f, np.zeros(self.frame_size - len(f))))
+
             s = rt.segment(f)
+
             if not 'onset' in c_segments and s == rt.ONSET:
                 c_segments['onset'] = i
             elif not 'sustain' in c_segments and s == rt.SUSTAIN:
