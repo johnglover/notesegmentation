@@ -125,6 +125,7 @@ void RTSegmentation::frame_size(int frame_size) {
     }
     _fft_out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * _num_bins);
 
+    fftw_destroy_plan(_plan);
 	_plan = fftw_plan_dft_r2c_1d(_frame_size, _fft_in,
                                  _fft_out, FFTW_ESTIMATE);
 
